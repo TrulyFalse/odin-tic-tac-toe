@@ -4,31 +4,38 @@ console.log("It works!");
 // Model
 let gameboard = (() => {
     // properties
+    const CONSOLE_OUTPUT = true;
     const GRID_SIZE = 3;
-    // enum of all game states possible: PLAYER_NAMING, ROUND_START, ROUND_ONGOING, ROUND_END, MATCH-END
     const states = {
-        PLAYER_NAMING: `PLAYER_NAMING`,
-        ROUND_START:`ROUND_START`,
+        // enum of all game states possible: ROUND_ONGOING, ROUND_END, MATCH-END
         ROUND_ONGOING:`ROUND_ONGOING`,
         ROUND_END:`ROUND_END`,
         MATCH_END:`MATCH_END`,
     };
+    let currentState = states.MATCH_END;
 
-    let currentState = states.PLAYER_NAMING;
-    let moves, currentRounds, numOfRounds = 0;
-    let firstMover, players;
+    let numOfRounds, lastRoundWinner, matchWinner, currentRound, moves;
+    let players;
     let grid = new Array(GRID_SIZE).fill(null);
     grid = grid.map(() => new Array(GRID_SIZE).fill(null));
 
     // methods
-    let initializeMatch = (playerInfo, inputNumOfRounds) => {
-        if(currentState !== states.PLAYER_NAMING)
-            return `ERROR: Game is ongoing!`;
+    let firstMoverCoinToss = () => {
+        let winningPlayer = (Math.floor(Math.random() * 2) === 0) ? 'A' : 'B';
+        return winningPlayer;
+    }
+    let initializeMatch = (playerInfo, inputNumOfRounds = 2) => {
+        if(currentState !== states.MATCH_END)
+            return `Can't initialize, game is ongoing!`;
 
-        currentRounds = 0;
-        moves = 0;
+        // initializing all properties
         numOfRounds = inputNumOfRounds;
-        firstMover = firstMoverCoinToss();
+        lastRoundWinner = undefined;
+        matchWinner = undefined;
+        currentRound = 1;
+        moves = 0;
+
+        let firstMover = firstMoverCoinToss();
         players = {
             A: {
                 name: playerInfo.A.name,
@@ -43,38 +50,38 @@ let gameboard = (() => {
                 isTheirTurn: (firstMover === 'B'),
             }
         }
-        currentState = states.ROUND_START;
-        return structuredClone(players);
+        currentState = states.ROUND_ONGOING;
     }
     
-    let firstMoverCoinToss = () => {
-        let winningPlayer = (Math.floor(Math.random() * 2) === 0) ? 'A' : 'B';
-        return winningPlayer;
-    }
-    
-    let getCell = (row, col) => grid[row][col];
     let getGrid = () => grid.slice();
-    
-    let toggleTurn = () => {
-        players.A.isTheirTurn = !players.A.isTheirTurn;
-        players.B.isTheirTurn = !players.B.isTheirTurn;
+
+    let whoseTurn = () => {
+        for (let player in players)
+            if (players[player].isTheirTurn)
+                return player;
     }
-    let makeMove = (playerID, row, col) => {
+    let makeMove = (row, col, playerID = "auto") => {
         if(currentState !== states.ROUND_ONGOING)
             return  `Round has not started!`;
-        let player = players[playerID];
+        
+        // gameboard knows which player is making the current move, so playerID isn't mandatory to mention
+        let player = (playerID === 'auto') ? players[whoseTurn()] : players[playerID];
+        
         if(player.isTheirTurn === false)
             return `Not player ${playerID}'s turn!`;
-        if(getCell(row, col) === undefined)
+        if(grid[row][col] === undefined)
             return `Can't set cell out of 3x3 grid bounds`;
-        else if(getCell(row, col) !== null)
+        else if(grid[row][col] !== null)
             return `Can't set ${player.mark} mark in cell(${row}, ${col}) as it is occupied!`; 
         else {
             grid[row][col] = player.mark;
             moves++;
-            toggleTurn();
-            let anyWinner = checkWin();
-            return anyWinner;
+            
+            // toggling player turns
+            players.A.isTheirTurn = !players.A.isTheirTurn;
+            players.B.isTheirTurn = !players.B.isTheirTurn;
+
+            checkWin();
         }
     }
     
@@ -82,93 +89,142 @@ let gameboard = (() => {
         if(moves < 5) return false; // wins not possible before 5th move
         
         let firstMark;
-        let sameMarks;
+        let threeOfSameMark;
 
         // check all rows
         for(let row of grid){
             firstMark = row[0];
             if(firstMark === null) continue;
-            sameMarks = row.every((cell) => cell === firstMark);
-            if(sameMarks) break;
+            threeOfSameMark = row.every((cell) => cell === firstMark);
+            if(threeOfSameMark) break;
         }
 
         // check all columns
-        if(!sameMarks){
+        if(!threeOfSameMark){
             for(let i = 0; i < GRID_SIZE; i++){
-                sameMarks = true;
                 firstMark = grid[0][i];
                 if(firstMark === null) continue;
+                threeOfSameMark = true; // using as a flag so start by assuming true
                 for(let j = 1; j < GRID_SIZE; j++){
                     if(grid[j][i] !== firstMark)
-                        sameMarks = false;
+                        threeOfSameMark = false;
                 }
-                if(sameMarks) break;
+                if(threeOfSameMark) break;
             }
         }
 
         // check diagonals
-        if(!sameMarks){
+        if(!threeOfSameMark){
             firstMark = grid[0][0];
             if (firstMark !== null){
-                sameMarks = true;
+                threeOfSameMark = true;
                 for(let i = 1; i < GRID_SIZE; i++){
                     if(grid[i][i] !== firstMark)
-                        sameMarks = false;
+                        threeOfSameMark = false;
                 }
             }
-            if(!sameMarks){
-                firstMark = grid[0][GRID_SIZE - 1];
-                if (firstMark !== null) {
-                    sameMarks = true;
-                    for (let i = 1; i < GRID_SIZE; i++) {
-                        if (grid[i][GRID_SIZE - 1 - i] !== firstMark)
-                            sameMarks = false;
-                    }
+        }
+        if(!threeOfSameMark){
+            firstMark = grid[0][GRID_SIZE - 1];
+            if (firstMark !== null) {
+                threeOfSameMark = true;
+                for (let i = 1; i < GRID_SIZE; i++) {
+                    if (grid[i][GRID_SIZE - 1 - i] !== firstMark)
+                        threeOfSameMark = false;
                 }
             }
         }
 
-        if(sameMarks){
-            nextRound();
-            if(firstMark === players.A.mark) {
-                players.A.score++;
-                return players.A;
-            } else {
-                players.B.score++;
-                return players.B;
+        // if three of the same mark are found in either rows, cols or diagonals, then return round winner
+        if(threeOfSameMark){
+            currentState = states.ROUND_END;
+            lastRoundWinner = (firstMark === players.A.mark) ? players.A : players.B;
+            lastRoundWinner.score++;
+            if (CONSOLE_OUTPUT) {
+                console.log(`Round #${currentRound} won by ${lastRoundWinner.name} (${lastRoundWinner.mark})!`);
+                console.log(players);
             }
         } else if(moves === 9){
-            nextRound();
-            return `draw`;
-        } else{
-            return false;
-        } 
+            currentState = states.ROUND_END;
+            lastRoundWinner = null;
+            if(CONSOLE_OUTPUT) console.log(`Round #${currentRound} drawn!`)
+        }
     }
     
     let resetGrid = () => {
         grid = grid.map(row => row.map(() => null));
     }
-
     let nextRound = () => {
+        if(currentState !== states.ROUND_END)
+            return `Cannot start next round, current round hasn't ended!`;
+        
         resetGrid();
-        firstMover = firstMoverCoinToss();
+        currentRound++;
+        moves = 0;
+
+        if(currentRound > numOfRounds){
+            endMatch();
+            return;
+        }
+        
+        // reassigning O and X marks
+        let firstMover = firstMoverCoinToss();
         players.A.isTheirTurn = (firstMover === 'A');
         players.B.isTheirTurn = (firstMover === 'B');
-        currentRounds++;
+        players.A.mark = (firstMover === 'A') ? 'X' : 'O';
+        players.B.mark = (firstMover === 'B') ? 'X' : 'O';
+
+        currentState = states.ROUND_ONGOING;
+    }
+    let endMatch = () => {
+        currentState = states.MATCH_END;
+        
+        let matchWinner;
+        if (players.A.score > players.B.score){
+            matchWinner = players.A;
+            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.name}!`);
+        } else if (players.A.score < players.B.score){
+            matchWinner = players.B;
+            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.name}!`);
+        } else {
+            matchWinner = null;
+            if (CONSOLE_OUTPUT) console.log(`The match has been drawn!`);
+        }
+
+        
     }
 
+    let getGameState = () => {
+        // return {currentState, currentRound, numOfRounds, lastRoundWinner, matchWinner};
+        let stateInfo = {state: currentState, grid: getGrid(), players};
+        switch(currentState){
+            case states.ROUND_ONGOING:
+                stateInfo.currentTurn = whoseTurn();
+                break;
+            case states.ROUND_END:
+                stateInfo.roundWinner = lastRoundWinner;
+                break;
+            case states.MATCH_END:
+                stateInfo.matchWinner = matchWinner;
+                break;
+            default:
+                console.log("Unknown state!");
+                return
+        }
+        return stateInfo;
+    }
     
-    // public methods
+    // public
     // aiming to expose a few complex methods (as opposed to many simple methods) to minimize coupling and have a coarse-grained interface
-    return {initializeMatch, getGrid, makeMove};
+    return {initializeMatch, makeMove, nextRound, getGameState};
 })();
 
-// Viewer
+// View
 let boardRenderer = (() => {
-    let renderBoard = (boardContainer) => {
+    let renderBoard = (grid, boardContainer) => {
         for (let row of grid) {
             let printableRow = row.map(cell => {
-                if (cell === undefined) return `[ ]`;
+                if (cell === null) return `[ ]`;
                 return `[${cell}]`;
             }).join(" ");
             console.log(printableRow);
@@ -179,17 +235,20 @@ let boardRenderer = (() => {
     return {renderBoard};
 })();
 
-let initializedPlayerInfo = gameboard.initializeMatch({A:{name: "David"}, B:{name: "Toptonov"}}, 5);
+gameboard.initializeMatch({A:{name: "David"}, B:{name: "Toptonov"}});
+gameboard.makeMove(0, 0);
+gameboard.makeMove(1, 0);
+gameboard.makeMove(1, 1);
+gameboard.makeMove(2, 1);
+gameboard.makeMove(2, 2);
+boardRenderer.renderBoard(gameboard.getGameState().grid,);
 
-let firstMover;
-for(let player in initializedPlayerInfo){
-    if(initializedPlayerInfo[player].isTheirTurn)
-        firstMover = player;
-}
-gameboard.makeMove(firstMover, 0, 0);
-gameboard.makeMove("B", 1, 0);
-gameboard.makeMove("A", 0, 1);
-gameboard.makeMove("B", 2, 1);
-boardRenderer.renderBoard();
-
-gameboard.renderBoard();
+gameboard.nextRound();
+gameboard.makeMove(0, 2);
+gameboard.makeMove(1, 0);
+gameboard.makeMove(1, 2);
+gameboard.makeMove(2, 1);
+gameboard.makeMove(2, 2);
+boardRenderer.renderBoard(gameboard.getGameState().grid,);
+gameboard.nextRound();
+console.log(gameboard.getGameState().state);
