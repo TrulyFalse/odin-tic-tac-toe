@@ -1,7 +1,26 @@
 console.log("It works!");
 
 // We will use MVC architecture
-// Model
+// Models
+function createPlayer(givenName, givenMark, givenTurn){
+    // private
+    let name = givenName;
+    let score = 0;
+    let mark = givenMark;
+
+    // public
+    let isTheirTurn = givenTurn;
+    
+    let getState = () => {name, score, mark, isTheirTurn};
+    
+    let incrementScore = () => score++;
+    let setMarkToCross = () => {mark = 'X';}
+    let setMarkToCircle = () => {mark = 'O';}
+    let setTurn = (isTurn) => {isTheirTurn = isTurn;}
+
+    return {getState, incrementScore, setMarkToCross, setMarkToCircle, setTurn};
+}
+
 let gameboard = (() => {
     // properties
     const CONSOLE_OUTPUT = true;
@@ -35,21 +54,30 @@ let gameboard = (() => {
         currentRound = 1;
         moves = 0;
 
-        let firstMover = firstMoverCoinToss();
+        let firstMover = firstMoverCoinToss(); // returns 'A' or 'B'
+        let markOfplayerA = (firstMover === 'A') ? 'X' : 'O';
+        let markOfplayerB = (firstMover === 'B') ? 'X' : 'O';
+        let turnOfPlayerA = (firstMover === 'A');
+        let turnOfPlayerB = (firstMover === 'B');
+
         players = {
-            A: {
-                name: playerInfo.A.name,
-                score: 0,
-                mark: (firstMover === 'A') ? 'X' : 'O',
-                isTheirTurn: (firstMover === 'A'),
-            },
-            B: {
-                name: playerInfo.B.name,
-                score: 0,
-                mark: (firstMover === 'B') ? 'X' : 'O',
-                isTheirTurn: (firstMover === 'B'),
-            }
+            A: createPlayer(playerInfo.A.name, markOfplayerA, turnOfPlayerA),
+            B: createPlayer(playerInfo.B.name, markOfplayerB, turnOfPlayerB),
         }
+        // players = {
+        //     A: {
+        //         name: playerInfo.A.name,
+        //         score: 0,
+        //         mark: (firstMover === 'A') ? 'X' : 'O',
+        //         isTheirTurn: (firstMover === 'A'),
+        //     },
+        //     B: {
+        //         name: playerInfo.B.name,
+        //         score: 0,
+        //         mark: (firstMover === 'B') ? 'X' : 'O',
+        //         isTheirTurn: (firstMover === 'B'),
+        //     }
+        // }
         currentState = states.ROUND_ONGOING;
     }
     
@@ -57,7 +85,7 @@ let gameboard = (() => {
 
     let whoseTurn = () => {
         for (let player in players)
-            if (players[player].isTheirTurn)
+            if (players[player].getState().isTheirTurn)
                 return player;
     }
     let makeMove = (row, col, playerID = "auto") => {
@@ -67,7 +95,7 @@ let gameboard = (() => {
         // gameboard knows which player is making the current move, so playerID isn't mandatory to mention
         let player = (playerID === 'auto') ? players[whoseTurn()] : players[playerID];
         
-        if(player.isTheirTurn === false)
+        if(player.getState().isTheirTurn === false)
             return `Not player ${playerID}'s turn!`;
         if(grid[row][col] === undefined)
             return `Can't set cell out of 3x3 grid bounds`;
@@ -78,8 +106,8 @@ let gameboard = (() => {
             moves++;
             
             // toggling player turns
-            players.A.isTheirTurn = !players.A.isTheirTurn;
-            players.B.isTheirTurn = !players.B.isTheirTurn;
+            players.A.getState().isTheirTurn = !players.A.getState().isTheirTurn;
+            players.B.getState().isTheirTurn = !players.B.getState().isTheirTurn;
 
             checkWin();
         }
@@ -138,10 +166,10 @@ let gameboard = (() => {
         // if three of the same mark are found in either rows, cols or diagonals, then return round winner
         if(threeOfSameMark){
             currentState = states.ROUND_END;
-            lastRoundWinner = (firstMark === players.A.mark) ? players.A : players.B;
-            lastRoundWinner.score++;
+            lastRoundWinner = (firstMark === players.A.getState().mark) ? players.A : players.B;
+            lastRoundWinner.incrementScore();
             if (CONSOLE_OUTPUT) {
-                console.log(`Round #${currentRound} won by ${lastRoundWinner.name} (${lastRoundWinner.mark})!`);
+                console.log(`Round #${currentRound} won by ${lastRoundWinner.getState().name} (${lastRoundWinner.getState().mark})!`);
                 console.log(players);
             }
         } else if(moves === 9){
@@ -169,10 +197,15 @@ let gameboard = (() => {
         
         // reassigning O and X marks
         let firstMover = firstMoverCoinToss();
-        players.A.isTheirTurn = (firstMover === 'A');
-        players.B.isTheirTurn = (firstMover === 'B');
-        players.A.mark = (firstMover === 'A') ? 'X' : 'O';
-        players.B.mark = (firstMover === 'B') ? 'X' : 'O';
+        players.A.setTurn(firstMover === 'A');
+        players.B.setTurn(firstMover === 'B');
+        if(firstMover === 'A'){
+            players.A.setMarkToCross();
+            players.B.setMarkToCircle();
+        } else if (firstMover === 'B'){
+            players.B.setMarkToCross();
+            players.A.setMarkToCircle();
+        }
 
         currentState = states.ROUND_ONGOING;
     }
@@ -180,12 +213,12 @@ let gameboard = (() => {
         currentState = states.MATCH_END;
         
         let matchWinner;
-        if (players.A.score > players.B.score){
+        if (players.A.getState().score > players.B.getState().score){
             matchWinner = players.A;
-            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.name}!`);
-        } else if (players.A.score < players.B.score){
+            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.getState().name}!`);
+        } else if (players.A.getState().score < players.B.getState().score){
             matchWinner = players.B;
-            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.name}!`);
+            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.getState().name}!`);
         } else {
             matchWinner = null;
             if (CONSOLE_OUTPUT) console.log(`The match has been drawn!`);
@@ -209,7 +242,7 @@ let gameboard = (() => {
                 break;
             default:
                 console.log("Unknown state!");
-                return
+                return;
         }
         return stateInfo;
     }
