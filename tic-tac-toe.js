@@ -6,12 +6,14 @@ function createPlayer(givenName, givenMark, givenTurn){
     // private
     let name = givenName;
     let score = 0;
-    let mark = givenMark;
+    let mark = (givenMark === 'X') ? 'X' : (givenMark === 'O') ? 'O' : null;
 
     // public
     let isTheirTurn = givenTurn;
     
-    let getState = () => {name, score, mark, isTheirTurn};
+    let getState = () => {
+        return {name, score, mark, isTheirTurn};
+    }
     
     let incrementScore = () => score++;
     let setMarkToCross = () => {mark = 'X';}
@@ -102,12 +104,12 @@ let gameboard = (() => {
         else if(grid[row][col] !== null)
             return `Can't set ${player.mark} mark in cell(${row}, ${col}) as it is occupied!`; 
         else {
-            grid[row][col] = player.mark;
+            grid[row][col] = player.getState().mark;
             moves++;
             
             // toggling player turns
-            players.A.getState().isTheirTurn = !players.A.getState().isTheirTurn;
-            players.B.getState().isTheirTurn = !players.B.getState().isTheirTurn;
+            players.A.setTurn(!players.A.getState().isTheirTurn);
+            players.B.setTurn(!players.B.getState().isTheirTurn);
 
             checkWin();
         }
@@ -175,7 +177,7 @@ let gameboard = (() => {
         } else if(moves === 9){
             currentState = states.ROUND_END;
             lastRoundWinner = null;
-            if(CONSOLE_OUTPUT) console.log(`Round #${currentRound} drawn!`)
+            if(CONSOLE_OUTPUT) console.log(`Round #${currentRound} drawn!`);
         }
     }
     
