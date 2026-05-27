@@ -172,7 +172,7 @@ let gameboard = (() => {
             lastRoundWinner.incrementScore();
             if (CONSOLE_OUTPUT) {
                 console.log(`Round #${currentRound} won by ${lastRoundWinner.getState().name} (${lastRoundWinner.getState().mark})!`);
-                console.log(players);
+                console.log(getGameState().players);
             }
         } else if(moves === 9){
             currentState = states.ROUND_END;
@@ -231,16 +231,23 @@ let gameboard = (() => {
 
     let getGameState = () => {
         // return {currentState, currentRound, numOfRounds, lastRoundWinner, matchWinner};
-        let stateInfo = {state: currentState, grid: getGrid(), players};
+        let stateInfo = {
+            state: currentState, 
+            grid: getGrid(), 
+            players: {
+                A: players.A.getState(), 
+                B: players.B.getState()
+            }
+        };
         switch(currentState){
             case states.ROUND_ONGOING:
                 stateInfo.currentTurn = whoseTurn();
                 break;
             case states.ROUND_END:
-                stateInfo.roundWinner = lastRoundWinner;
+                stateInfo.roundWinner = lastRoundWinner.getState();
                 break;
             case states.MATCH_END:
-                stateInfo.matchWinner = matchWinner;
+                stateInfo.matchWinner = (matchWinner) ? matchWinner.getState() : null;
                 break;
             default:
                 console.log("Unknown state!");
@@ -270,7 +277,7 @@ let boardRenderer = (() => {
     return {renderBoard};
 })();
 
-gameboard.initializeMatch({A:{name: "David"}, B:{name: "Toptonov"}});
+gameboard.initializeMatch({A:{name: "David"}, B:{name: "Toptonov"}}, 5);
 gameboard.makeMove(0, 0);
 gameboard.makeMove(1, 0);
 gameboard.makeMove(1, 1);
