@@ -1,4 +1,6 @@
 console.log("It works!");
+const CONSOLE_OUTPUT = true;
+
 
 // We will use MVC architecture
 // Models
@@ -25,7 +27,6 @@ function createPlayer(givenName, givenMark, givenTurn){
 
 let gameboard = (() => {
     // properties
-    const CONSOLE_OUTPUT = true;
     const GRID_SIZE = 3;
     const states = {
         // enum of all game states possible: ROUND_ONGOING, ROUND_END, MATCH-END
@@ -263,14 +264,59 @@ let gameboard = (() => {
 
 // View
 let boardRenderer = (() => {
-    let renderBoard = (grid, boardContainer) => {
-        for (let row of grid) {
-            let printableRow = row.map(cell => {
-                if (cell === null) return `[ ]`;
-                return `[${cell}]`;
-            }).join(" ");
-            console.log(printableRow);
+
+    let createGridCell = (mark) => {
+        //<div>
+        //  <button class="grid-cell">
+        //      <img src="./img/nothing.png" alt="cross/circle symbol">
+        //  </button>
+        //</div>
+
+        let crossImgPath = './img/cross.png';
+        let circleImgPath = './img/circle.png';
+        let emptyImgPath = './img/nothing.png';
+
+        let div = document.createElement('div');
+        let gridCellBtn = document.createElement('button');
+        let img = document.createElement('img');
+        switch(mark){
+            case 'X':
+                img.setAttribute('src', crossImgPath);
+                break;
+            case 'O':
+                img.setAttribute('src', circleImgPath);
+                break;
+            case null:
+                img.setAttribute('src', emptyImgPath);
+                break;
+            default:
+                return 'unknown mark!';
         }
+        gridCellBtn.append(img);
+        div.append(gridCellBtn);
+        return div;
+
+    }
+
+    let renderBoard = (grid, boardContainer) => {
+        if(CONSOLE_OUTPUT){
+            for (let row of grid) {
+                let printableRow = row.map(cell => {
+                    if (cell === null) return `[ ]`;
+                    return `[${cell}]`;
+                }).join(" ");
+                console.log(printableRow);
+            }
+        }
+
+        
+        for(let row of grid){
+            for(let cell of row){
+
+            }
+        }
+
+
     }
 
     // public
