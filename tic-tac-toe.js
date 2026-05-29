@@ -272,19 +272,24 @@ let boardRenderer = (() => {
         //  </button>
         //</div>
 
-        let crossImgPath = './img/cross.png';
-        let circleImgPath = './img/circle.png';
-        let emptyImgPath = './img/nothing.png';
+        const crossImgPath = './img/cross.png';
+        const circleImgPath = './img/circle.png';
+        const emptyImgPath = './img/nothing.png';
 
         let div = document.createElement('div');
         let gridCellBtn = document.createElement('button');
+        gridCellBtn.classList.toggle('grid-cell');
         let img = document.createElement('img');
         switch(mark){
             case 'X':
                 img.setAttribute('src', crossImgPath);
+                img.setAttribute('alt', 'cross mark');
+                gridCellBtn.classList.toggle('filled');
                 break;
             case 'O':
                 img.setAttribute('src', circleImgPath);
+                img.setAttribute('alt', 'circle mark');
+                gridCellBtn.classList.toggle('filled');
                 break;
             case null:
                 img.setAttribute('src', emptyImgPath);
@@ -295,11 +300,15 @@ let boardRenderer = (() => {
         gridCellBtn.append(img);
         div.append(gridCellBtn);
         return div;
-
     }
 
     let renderBoard = (grid, boardContainer) => {
-        if(CONSOLE_OUTPUT){
+        boardContainer.innerHTML = "";
+        for(let row of grid)
+            for(let cell of row)
+                boardContainer.append(createGridCell(cell));
+
+        if (CONSOLE_OUTPUT) {
             for (let row of grid) {
                 let printableRow = row.map(cell => {
                     if (cell === null) return `[ ]`;
@@ -308,20 +317,14 @@ let boardRenderer = (() => {
                 console.log(printableRow);
             }
         }
-
-        
-        for(let row of grid){
-            for(let cell of row){
-
-            }
-        }
-
-
     }
 
     // public
     return {renderBoard};
 })();
+
+
+let boardContainer = document.querySelector('main');
 
 gameboard.initializeMatch({A:{name: "David"}, B:{name: "Toptonov"}}, 5);
 gameboard.makeMove(0, 0);
@@ -329,7 +332,7 @@ gameboard.makeMove(1, 0);
 gameboard.makeMove(1, 1);
 gameboard.makeMove(2, 1);
 gameboard.makeMove(2, 2);
-boardRenderer.renderBoard(gameboard.getGameState().grid,);
+boardRenderer.renderBoard(gameboard.getGameState().grid, boardContainer);
 
 gameboard.nextRound();
 gameboard.makeMove(0, 2);
@@ -337,6 +340,6 @@ gameboard.makeMove(1, 0);
 gameboard.makeMove(1, 2);
 gameboard.makeMove(2, 1);
 gameboard.makeMove(2, 2);
-boardRenderer.renderBoard(gameboard.getGameState().grid,);
+boardRenderer.renderBoard(gameboard.getGameState().grid, boardContainer);
 gameboard.nextRound();
 console.log(gameboard.getGameState().state);
