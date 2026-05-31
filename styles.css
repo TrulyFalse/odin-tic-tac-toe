@@ -10,6 +10,7 @@ html {
 :root{
     --grid-size: 450px;
     --separation-s: 3px;
+    --separation-m: 1rem;
     --color-dark-grey: rgb(143, 143, 143);
     --color-light-grey: rgb(205, 205, 205);
     
@@ -53,4 +54,21 @@ main div, .grid-cell{
 }
 .grid-cell.filled img{
     opacity: 1.0;
+}
+
+#score-container{
+    width: var(--grid-size);
+}
+#score-container > p{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: underline;
+}
+.score {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min-content 1fr 1fr;
+    place-items: center start;
+    gap: var(--separation-m);
 }

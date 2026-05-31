@@ -322,36 +322,40 @@ let boardRenderer = (() => {
         // <p>Scores</p>
         // <div class="score">
         //     <img src="./img/cross.png" alt="cross symbol" width="50px">
-        //     <p></p>
+        //     <p>[name]</p>
+        //     <p>[score]</p>
         // </div>
-        // <div class="score">
-        //     <img src="./img/circle.png" alt="circle symbol" width="50px">
-        //     <p></p>
-        // </div>
+
+        scoresContainer.innerHTML = "";
+
         let headingPara = document.createElement('p');
         headingPara.textContent = 'Scores';
         scoresContainer.append(headingPara);
 
-        for(let player of playersInfo){
+        for(let player in playersInfo){
             let playerScoreDiv = document.createElement('div');
+            playerScoreDiv.classList.toggle('score');
             let markImg = document.createElement('img');
-            markImg.setAttribute('src', (player.mark === 'X') ? crossImgPath : circleImgPath);
-            markImg.setAttribute('alt', `player A mark: ${(player.mark === 'X') ? 'cross' : 'circle'}`);
+            markImg.setAttribute('src', (playersInfo[player].mark === 'X') ? crossImgPath : circleImgPath);
+            markImg.setAttribute('alt', `player ${player} mark: ${(playersInfo[player].mark === 'X') ? 'cross' : 'circle'}`);
             markImg.setAttribute('width', '50px');
+            let namePara = document.createElement('p');
+            namePara.textContent = playersInfo[player].name;
             let scorePara = document.createElement('p');
-            scorePara.textContent = player.score;
-            playerScoreDiv.append(markImg, scorePara);
+            scorePara.textContent = playersInfo[player].score;
+            playerScoreDiv.append(markImg, namePara, scorePara);
             
             scoresContainer.append(playerScoreDiv);
         }
     }
 
     // public
-    return {renderBoard};
+    return {renderBoard, renderScores};
 })();
 
 
-let boardContainer = document.querySelector('main');
+let boardContainer = document.querySelector('#board-container');
+let scoresContainer = document.querySelector('#score-container');
 
 gameboard.initializeMatch({A:{name: "David"}, B:{name: "Toptonov"}}, 5);
 gameboard.makeMove(0, 0);
@@ -359,6 +363,7 @@ gameboard.makeMove(1, 0);
 gameboard.makeMove(1, 1);
 gameboard.makeMove(2, 1);
 gameboard.makeMove(2, 2);
+boardRenderer.renderScores(scoresContainer, gameboard.getGameState().players);
 boardRenderer.renderBoard(gameboard.getGameState().grid, boardContainer);
 
 gameboard.nextRound();
@@ -367,6 +372,7 @@ gameboard.makeMove(1, 0);
 gameboard.makeMove(1, 2);
 gameboard.makeMove(2, 1);
 gameboard.makeMove(2, 2);
+boardRenderer.renderScores(scoresContainer, gameboard.getGameState().players);
 boardRenderer.renderBoard(gameboard.getGameState().grid, boardContainer);
 gameboard.nextRound();
 console.log(gameboard.getGameState().state);
