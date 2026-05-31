@@ -264,6 +264,9 @@ let gameboard = (() => {
 
 // View
 let boardRenderer = (() => {
+    const crossImgPath = './img/cross.png';
+    const circleImgPath = './img/circle.png';
+    const emptyImgPath = './img/nothing.png';
 
     let createGridCell = (mark) => {
         //<div>
@@ -271,10 +274,6 @@ let boardRenderer = (() => {
         //      <img src="./img/nothing.png" alt="cross/circle symbol">
         //  </button>
         //</div>
-
-        const crossImgPath = './img/cross.png';
-        const circleImgPath = './img/circle.png';
-        const emptyImgPath = './img/nothing.png';
 
         let div = document.createElement('div');
         let gridCellBtn = document.createElement('button');
@@ -316,6 +315,34 @@ let boardRenderer = (() => {
                 }).join(" ");
                 console.log(printableRow);
             }
+        }
+    }
+
+    let renderScores = (scoresContainer, playersInfo) => {
+        // <p>Scores</p>
+        // <div class="score">
+        //     <img src="./img/cross.png" alt="cross symbol" width="50px">
+        //     <p></p>
+        // </div>
+        // <div class="score">
+        //     <img src="./img/circle.png" alt="circle symbol" width="50px">
+        //     <p></p>
+        // </div>
+        let headingPara = document.createElement('p');
+        headingPara.textContent = 'Scores';
+        scoresContainer.append(headingPara);
+
+        for(let player of playersInfo){
+            let playerScoreDiv = document.createElement('div');
+            let markImg = document.createElement('img');
+            markImg.setAttribute('src', (player.mark === 'X') ? crossImgPath : circleImgPath);
+            markImg.setAttribute('alt', `player A mark: ${(player.mark === 'X') ? 'cross' : 'circle'}`);
+            markImg.setAttribute('width', '50px');
+            let scorePara = document.createElement('p');
+            scorePara.textContent = player.score;
+            playerScoreDiv.append(markImg, scorePara);
+            
+            scoresContainer.append(playerScoreDiv);
         }
     }
 
