@@ -252,7 +252,7 @@ let gameboard = (() => {
                 stateInfo.currentTurn = whoseTurn();
                 break;
             case states.ROUND_END:
-                stateInfo.roundWinner = lastRoundWinner.getState();
+                stateInfo.roundWinner = (lastRoundWinner) ? lastRoundWinner.getState() : null;
                 break;
             case states.MATCH_END:
                 stateInfo.matchWinner = (matchWinner) ? matchWinner.getState() : null;
@@ -271,32 +271,44 @@ let gameboard = (() => {
 
 // View
 let boardRenderer = (() => {
-    let boardContainer, scoresContainer, gameController;
+    let gameController;
+
+    let containers = {
+        naming: null,
+        board: null,
+        scores: null,
+        results: null,
+    };
+    
     let lastRenderedGrid = [];
     const crossImgPath = './img/cross.png';
     const circleImgPath = './img/circle.png';
     const emptyImgPath = './img/nothing.png';
 
-    let initialize = (givenBoardContainer, givenScoresContainer, givenGameController) => {
-        boardContainer = givenBoardContainer;
-        scoresContainer = givenScoresContainer;
+    let initialize = (givenGameController, givenContainers) => {
         gameController = givenGameController;
-        boardContainer.innerHTML = "";
-        scoresContainer.innerHTML = "";
+        
+        const {naming, board, scores, results} = givenContainers;
+        containers = {naming, board, scores, results};
+        
+        // containers.naming.innerHTML = "";
+        // containers.board.innerHTML = "";
+        // containers.scores.innerHTML = "";
+        // containers.results.innerHTML = "";
 
         for(let i = 0; i < GRID_SIZE ** 2; i++)
-            boardContainer.append(createGridCell(null));
+            containers.board.append(createGridCell(null));
 
         lastRenderedGrid = new Array(GRID_SIZE).fill(null).map(() => new Array(GRID_SIZE).fill(null));
 
-        boardContainer.addEventListener('click', (e) => {
+        containers.board.addEventListener('click', (e) => {
             if (e.target.classList.contains('filled') || e.target.parentElement.classList.contains('filled'))
                 return;
 
-            let cellBtnList = boardContainer.querySelectorAll('button');
+            let cellBtnList = containers.board.querySelectorAll('button');
             cellBtnList = [...cellBtnList];
             for (let i = 0; i < cellBtnList.length; i++) {
-                if(e.target === cellBtnList[i] || e.target.parentElement === cellBtnList[i]){
+                if (e.target === cellBtnList[i] || e.target.parentElement === cellBtnList[i]) {
                     let row = Math.floor(i / GRID_SIZE);
                     let col = i % GRID_SIZE;
                     gameController.cellClicked(row, col);
@@ -344,16 +356,20 @@ let boardRenderer = (() => {
             for(let j = 0; j < GRID_SIZE; j++)
                 if(grid[i][j] !== lastRenderedGrid[i][j]){
                     let cellNumber = (i * GRID_SIZE) + j + 1;
-                    let oldCell = boardContainer.querySelector(`div:nth-child(${cellNumber})`);
+                    let oldCell = containers.board.querySelector(`div:nth-child(${cellNumber})`);
                     let newCell = createGridCell(grid[i][j]);
 
-                    boardContainer.insertBefore(newCell, oldCell);
+                    containers.board.insertBefore(newCell, oldCell);
                     oldCell.remove();
                 }
         
-        lastRenderedGrid = grid;
+        // assign a deep copy of grid
+        for(let i = 0; i < lastRenderedGrid.length; i++){
+            lastRenderedGrid[i] = grid[i].slice();
+        }
 
         if (CONSOLE_OUTPUT) {
+            console.log(`----------`);
             for (let row of grid) {
                 let printableRow = row.map(cell => {
                     if (cell === null) return `[ ]`;
@@ -372,11 +388,11 @@ let boardRenderer = (() => {
         //     <p>[score]</p>
         // </div>
 
-        scoresContainer.innerHTML = "";
+        containers.scores.innerHTML = "";
 
         let headingPara = document.createElement('p');
         headingPara.textContent = 'Scores';
-        scoresContainer.append(headingPara);
+        containers.scores.append(headingPara);
 
         for(let player in playersInfo){
             let playerScoreDiv = document.createElement('div');
@@ -391,41 +407,71 @@ let boardRenderer = (() => {
             scorePara.textContent = playersInfo[player].score;
             playerScoreDiv.append(markImg, namePara, scorePara);
             
-            scoresContainer.append(playerScoreDiv);
+            containers.scores.append(playerScoreDiv);
+        }
+    }
+
+    let renderNaming = () => {
+        let players = {
+            A: {name: prompt(`Write player A's name:`, 'Player A')},
+            B: {name: prompt(`Write player B's name:`, 'Player B')},
+        }
+        let rounds = prompt(`How many rounds?`, 2);
+        gameController.startMatch(players, rounds);
+    }
+
+    let renderResults = (gameState) => {
+
+    }
+
+    // public
+    return {initialize, renderBoard, renderScores, renderResults, renderNaming};
+})();
+
+// controller
+let gameController = (() => {
+    let gameboard, boardRenderer;
+
+    let initialize = (givenGameboard, givenBoardRenderer) => {
+        gameboard = givenGameboard;
+        boardRenderer = givenBoardRenderer;
+
+        // initialize view
+        let containers = {
+            naming: null,
+            board: document.querySelector('#board-container'),
+            scores: document.querySelector('#score-container'),
+            results: null,
+        };
+        boardRenderer.initialize(gameController, containers);
+        
+        // start off the game's flow with the naming
+        boardRenderer.renderNaming();
+    }
+
+    let startMatch = (playersInfo, rounds) => {
+        gameboard.initializeMatch(playersInfo, rounds);
+        let gameState = gameboard.getGameState();
+        boardRenderer.renderScores(gameState.players);
+    }
+
+    let cellClicked = (row, col) => {
+        gameboard.makeMove(row, col);
+
+        let gameState = gameboard.getGameState();
+        boardRenderer.renderBoard(gameState.grid);
+        if(gameState.state === `ROUND_END`){
+            boardRenderer.renderScores(gameState.players);
+            boardRenderer.renderResults(gameState);
         }
     }
 
     // public
-    return {initialize, renderBoard, renderScores};
+    return {initialize, startMatch, cellClicked};
 })();
 
-// initialize view
-let boardContainer = document.querySelector('#board-container');
-let scoresContainer = document.querySelector('#score-container');
-boardRenderer.initialize(boardContainer, scoresContainer);
-// initialize model
-gameboard.initializeMatch({A:{name: "David"}, B:{name: "Toptonov"}}, 5);
 
 
-// manually play game
-gameboard.makeMove(0, 0);
-gameboard.makeMove(1, 0);
-gameboard.makeMove(1, 1);
-gameboard.makeMove(2, 1);
-gameboard.makeMove(2, 2);
-boardRenderer.renderScores(gameboard.getGameState().players);
-boardRenderer.renderBoard(gameboard.getGameState().grid);
 
-gameboard.nextRound();
-
-gameboard.makeMove(0, 2);
-gameboard.makeMove(1, 0);
-gameboard.makeMove(1, 2);
-gameboard.makeMove(2, 1);
-gameboard.makeMove(2, 2);
-boardRenderer.renderScores(gameboard.getGameState().players);
-boardRenderer.renderBoard(gameboard.getGameState().grid);
-
-gameboard.nextRound();
-
-console.log(gameboard.getGameState().state);
+// initialize controller
+gameController.initialize(gameboard, boardRenderer);
