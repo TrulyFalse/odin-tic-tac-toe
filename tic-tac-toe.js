@@ -1,5 +1,6 @@
 console.log("It works!");
 const CONSOLE_OUTPUT = true;
+const GRID_SIZE = 3;
 
 
 // We will use MVC architecture
@@ -27,7 +28,6 @@ function createPlayer(givenName, givenMark, givenTurn){
 
 let gameboard = (() => {
     // properties
-    const GRID_SIZE = 3;
     const states = {
         // enum of all game states possible: ROUND_ONGOING, ROUND_END, MATCH-END
         ROUND_ONGOING:`ROUND_ONGOING`,
@@ -36,10 +36,10 @@ let gameboard = (() => {
     };
     let currentState = states.MATCH_END;
 
+    let moveHistory = [];
     let numOfRounds, lastRoundWinner, matchWinner, currentRound, moves;
     let players;
-    let grid = new Array(GRID_SIZE).fill(null);
-    grid = grid.map(() => new Array(GRID_SIZE).fill(null));
+    let grid = new Array(GRID_SIZE).fill(null).map(() => new Array(GRID_SIZE).fill(null));
 
     // methods
     let firstMoverCoinToss = () => {
@@ -103,9 +103,14 @@ let gameboard = (() => {
         if(grid[row][col] === undefined)
             return `Can't set cell out of 3x3 grid bounds`;
         else if(grid[row][col] !== null)
-            return `Can't set ${player.mark} mark in cell(${row}, ${col}) as it is occupied!`; 
+            return `Can't set ${player.getState().mark} mark in cell(${row}, ${col}) as it is occupied!`; 
         else {
             grid[row][col] = player.getState().mark;
+            moveHistory.push({
+                row: row,
+                col: col,
+                mark: player.getState().mark,
+            });
             moves++;
             
             // toggling player turns
@@ -190,6 +195,7 @@ let gameboard = (() => {
             return `Cannot start next round, current round hasn't ended!`;
         
         resetGrid();
+        moveHistory = [];
         currentRound++;
         moves = 0;
 
@@ -238,7 +244,8 @@ let gameboard = (() => {
             players: {
                 A: players.A.getState(), 
                 B: players.B.getState()
-            }
+            },
+            moves: moveHistory.slice(),
         };
         switch(currentState){
             case states.ROUND_ONGOING:
@@ -264,9 +271,39 @@ let gameboard = (() => {
 
 // View
 let boardRenderer = (() => {
+    let boardContainer, scoresContainer, gameController;
+    let lastRenderedGrid = [];
     const crossImgPath = './img/cross.png';
     const circleImgPath = './img/circle.png';
     const emptyImgPath = './img/nothing.png';
+
+    let initialize = (givenBoardContainer, givenScoresContainer, givenGameController) => {
+        boardContainer = givenBoardContainer;
+        scoresContainer = givenScoresContainer;
+        gameController = givenGameController;
+        boardContainer.innerHTML = "";
+        scoresContainer.innerHTML = "";
+
+        for(let i = 0; i < GRID_SIZE ** 2; i++)
+            boardContainer.append(createGridCell(null));
+
+        lastRenderedGrid = new Array(GRID_SIZE).fill(null).map(() => new Array(GRID_SIZE).fill(null));
+
+        boardContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('filled') || e.target.parentElement.classList.contains('filled'))
+                return;
+
+            let cellBtnList = boardContainer.querySelectorAll('button');
+            cellBtnList = [...cellBtnList];
+            for (let i = 0; i < cellBtnList.length; i++) {
+                if(e.target === cellBtnList[i] || e.target.parentElement === cellBtnList[i]){
+                    let row = Math.floor(i / GRID_SIZE);
+                    let col = i % GRID_SIZE;
+                    gameController.cellClicked(row, col);
+                }
+            }
+        });
+    }
 
     let createGridCell = (mark) => {
         //<div>
@@ -301,11 +338,20 @@ let boardRenderer = (() => {
         return div;
     }
 
-    let renderBoard = (grid, boardContainer) => {
-        boardContainer.innerHTML = "";
-        for(let row of grid)
-            for(let cell of row)
-                boardContainer.append(createGridCell(cell));
+    // update all changes to board
+    let renderBoard = (grid) => {
+        for(let i = 0; i < GRID_SIZE; i++)
+            for(let j = 0; j < GRID_SIZE; j++)
+                if(grid[i][j] !== lastRenderedGrid[i][j]){
+                    let cellNumber = (i * GRID_SIZE) + j + 1;
+                    let oldCell = boardContainer.querySelector(`div:nth-child(${cellNumber})`);
+                    let newCell = createGridCell(grid[i][j]);
+
+                    boardContainer.insertBefore(newCell, oldCell);
+                    oldCell.remove();
+                }
+        
+        lastRenderedGrid = grid;
 
         if (CONSOLE_OUTPUT) {
             for (let row of grid) {
@@ -318,7 +364,7 @@ let boardRenderer = (() => {
         }
     }
 
-    let renderScores = (scoresContainer, playersInfo) => {
+    let renderScores = (playersInfo) => {
         // <p>Scores</p>
         // <div class="score">
         //     <img src="./img/cross.png" alt="cross symbol" width="50px">
@@ -350,29 +396,36 @@ let boardRenderer = (() => {
     }
 
     // public
-    return {renderBoard, renderScores};
+    return {initialize, renderBoard, renderScores};
 })();
 
-
+// initialize view
 let boardContainer = document.querySelector('#board-container');
 let scoresContainer = document.querySelector('#score-container');
-
+boardRenderer.initialize(boardContainer, scoresContainer);
+// initialize model
 gameboard.initializeMatch({A:{name: "David"}, B:{name: "Toptonov"}}, 5);
+
+
+// manually play game
 gameboard.makeMove(0, 0);
 gameboard.makeMove(1, 0);
 gameboard.makeMove(1, 1);
 gameboard.makeMove(2, 1);
 gameboard.makeMove(2, 2);
-boardRenderer.renderScores(scoresContainer, gameboard.getGameState().players);
-boardRenderer.renderBoard(gameboard.getGameState().grid, boardContainer);
+boardRenderer.renderScores(gameboard.getGameState().players);
+boardRenderer.renderBoard(gameboard.getGameState().grid);
 
 gameboard.nextRound();
+
 gameboard.makeMove(0, 2);
 gameboard.makeMove(1, 0);
 gameboard.makeMove(1, 2);
 gameboard.makeMove(2, 1);
 gameboard.makeMove(2, 2);
-boardRenderer.renderScores(scoresContainer, gameboard.getGameState().players);
-boardRenderer.renderBoard(gameboard.getGameState().grid, boardContainer);
+boardRenderer.renderScores(gameboard.getGameState().players);
+boardRenderer.renderBoard(gameboard.getGameState().grid);
+
 gameboard.nextRound();
+
 console.log(gameboard.getGameState().state);
