@@ -221,7 +221,6 @@ let gameboard = (() => {
     let endMatch = () => {
         currentState = states.MATCH_END;
         
-        let matchWinner;
         if (players.A.getState().score > players.B.getState().score){
             matchWinner = players.A;
             if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.getState().name}!`);
@@ -426,7 +425,35 @@ let boardRenderer = (() => {
     }
 
     let renderResults = (gameState) => {
+        let winMessagePara = document.createElement('p');
+        let nextRoundBtn = document.createElement('button');
 
+        if(gameState.state === `ROUND_END`){
+            if(gameState.roundWinner !== null){
+                winMessagePara.textContent = `Round ${gameState.round} has been won by ${gameState.roundWinner.name} (${gameState.roundWinner.mark}) !`;
+            } else {
+                winMessagePara.textContent = `Round ${gameState.round} has been drawn.`;
+            }
+            nextRoundBtn.textContent = 'Next';
+            nextRoundBtn.addEventListener('click', () => {
+                gameController.nextRound();
+                containers.results.removeChild(winMessagePara);
+                containers.results.removeChild(nextRoundBtn);
+            })
+        } else if (gameState.state === `MATCH_END`){
+            if (gameState.matchWinner !== null) {
+                winMessagePara.textContent = `Match has been won by ${gameState.matchWinner.name}!`;
+            } else {
+                winMessagePara.textContent = `Match has been drawn.`;
+            }
+            nextRoundBtn.textContent = 'Restart';
+            nextRoundBtn.addEventListener('click', () => {
+                renderNaming();
+                containers.results.removeChild(winMessagePara);
+                containers.results.removeChild(nextRoundBtn);
+            })
+        }
+        containers.results.append(winMessagePara, nextRoundBtn);
     }
 
     // public
@@ -446,7 +473,7 @@ let gameController = (() => {
             naming: null,
             board: document.querySelector('#board-container'),
             scores: document.querySelector('#score-container'),
-            results: null,
+            results: document.querySelector('#results-container'),
         };
         boardRenderer.initialize(gameController, containers);
         
@@ -458,6 +485,7 @@ let gameController = (() => {
         gameboard.initializeMatch(playersInfo, rounds);
         let gameState = gameboard.getGameState();
         boardRenderer.renderScores(gameState.players, gameState.round, gameState.numOfRounds);
+        boardRenderer.renderBoard(gameState.grid);
     }
 
     let cellClicked = (row, col) => {
@@ -471,8 +499,20 @@ let gameController = (() => {
         }
     }
 
+    let nextRound = () => {
+        gameboard.nextRound();
+        let gameState = gameboard.getGameState();
+        console.log(gameState.state);
+        if(gameState.state === `ROUND_ONGOING`){
+            boardRenderer.renderScores(gameState.players, gameState.round, gameState.numOfRounds);
+            boardRenderer.renderBoard(gameState.grid);
+        } else if (gameState.state === `MATCH_END`){
+            boardRenderer.renderResults(gameState);
+        }
+    }
+
     // public
-    return {initialize, startMatch, cellClicked};
+    return {initialize, startMatch, cellClicked, nextRound};
 })();
 
 
