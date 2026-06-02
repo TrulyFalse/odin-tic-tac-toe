@@ -246,6 +246,8 @@ let gameboard = (() => {
                 B: players.B.getState()
             },
             moves: moveHistory.slice(),
+            round: currentRound,
+            numOfRounds: numOfRounds,
         };
         switch(currentState){
             case states.ROUND_ONGOING:
@@ -380,8 +382,9 @@ let boardRenderer = (() => {
         }
     }
 
-    let renderScores = (playersInfo) => {
+    let renderScores = (playersInfo, round, numOfRounds) => {
         // <p>Scores</p>
+        // <p>Round [round] of [maxRounds]</p>
         // <div class="score">
         //     <img src="./img/cross.png" alt="cross symbol" width="50px">
         //     <p>[name]</p>
@@ -392,7 +395,9 @@ let boardRenderer = (() => {
 
         let headingPara = document.createElement('p');
         headingPara.textContent = 'Scores';
-        containers.scores.append(headingPara);
+        let roundPara = document.createElement('p');
+        roundPara.textContent = `Round ${round} of ${numOfRounds}`;
+        containers.scores.append(headingPara, roundPara);
 
         for(let player in playersInfo){
             let playerScoreDiv = document.createElement('div');
@@ -400,7 +405,7 @@ let boardRenderer = (() => {
             let markImg = document.createElement('img');
             markImg.setAttribute('src', (playersInfo[player].mark === 'X') ? crossImgPath : circleImgPath);
             markImg.setAttribute('alt', `player ${player} mark: ${(playersInfo[player].mark === 'X') ? 'cross' : 'circle'}`);
-            markImg.setAttribute('width', '50px');
+            markImg.setAttribute('width', '20px');
             let namePara = document.createElement('p');
             namePara.textContent = playersInfo[player].name;
             let scorePara = document.createElement('p');
@@ -452,7 +457,7 @@ let gameController = (() => {
     let startMatch = (playersInfo, rounds) => {
         gameboard.initializeMatch(playersInfo, rounds);
         let gameState = gameboard.getGameState();
-        boardRenderer.renderScores(gameState.players);
+        boardRenderer.renderScores(gameState.players, gameState.round, gameState.numOfRounds);
     }
 
     let cellClicked = (row, col) => {
@@ -461,7 +466,7 @@ let gameController = (() => {
         let gameState = gameboard.getGameState();
         boardRenderer.renderBoard(gameState.grid);
         if(gameState.state === `ROUND_END`){
-            boardRenderer.renderScores(gameState.players);
+            boardRenderer.renderScores(gameState.players, gameState.round, gameState.numOfRounds);
             boardRenderer.renderResults(gameState);
         }
     }

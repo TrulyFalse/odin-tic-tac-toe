@@ -65,6 +65,9 @@ main div, .grid-cell{
     align-items: center;
     text-decoration: underline;
 }
+#score-container > p:nth-child(2){
+    text-decoration: none;
+}
 .score {
     display: grid;
     grid-auto-flow: column;
