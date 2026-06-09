@@ -5,25 +5,34 @@ const GRID_SIZE = 3;
 
 // We will use MVC architecture
 // Models
-function createPlayer(givenName, givenMark, givenTurn){
-    // private
-    let name = givenName;
-    let score = 0;
-    let mark = (givenMark === 'X') ? 'X' : (givenMark === 'O') ? 'O' : null;
+class Player{
+    #name;
+    #score;
+    #mark;
+    isTheirTurn;
 
-    // public
-    let isTheirTurn = givenTurn;
-    
-    let getState = () => {
-        return {name, score, mark, isTheirTurn};
+    constructor(givenName, givenMark, givenTurn){
+        this.#name = givenName;
+        this.#score = 0;
+        this.#mark = (givenMark === 'X') ? 'X' : (givenMark === 'O') ? 'O' : null;
+        this.isTheirTurn = givenTurn;
     }
-    
-    let incrementScore = () => score++;
-    let setMarkToCross = () => {mark = 'X';}
-    let setMarkToCircle = () => {mark = 'O';}
-    let setTurn = (isTurn) => {isTheirTurn = isTurn;}
+        
+    get state() {
+        return {
+            name: this.#name, 
+            score: this.#score, 
+            mark: this.#mark,
+            isTheirTurn: this.isTheirTurn,
+        };
+    }
+        
+    incrementScore = () => {this.#score++;}
+    setMarkToCross = () => {this.#mark = 'X';}
+    setMarkToCircle = () => {this.#mark = 'O';}
 
-    return {getState, incrementScore, setMarkToCross, setMarkToCircle, setTurn};
+    // legacy factory interface commented out so you can refactor methods carefully
+    // return {getState, incrementScore, setMarkToCross, setMarkToCircle, setTurn};  
 }
 
 let gameboard = (() => {
@@ -64,8 +73,8 @@ let gameboard = (() => {
         let turnOfPlayerB = (firstMover === 'B');
 
         players = {
-            A: createPlayer(playerInfo.A.name, markOfplayerA, turnOfPlayerA),
-            B: createPlayer(playerInfo.B.name, markOfplayerB, turnOfPlayerB),
+            A: new Player(playerInfo.A.name, markOfplayerA, turnOfPlayerA),
+            B: new Player(playerInfo.B.name, markOfplayerB, turnOfPlayerB),
         }
         // players = {
         //     A: {
@@ -88,7 +97,7 @@ let gameboard = (() => {
 
     let whoseTurn = () => {
         for (let player in players)
-            if (players[player].getState().isTheirTurn)
+            if (players[player].state.isTheirTurn)
                 return player;
     }
     let makeMove = (row, col, playerID = "auto") => {
@@ -98,24 +107,24 @@ let gameboard = (() => {
         // gameboard knows which player is making the current move, so playerID isn't mandatory to mention
         let player = (playerID === 'auto') ? players[whoseTurn()] : players[playerID];
         
-        if(player.getState().isTheirTurn === false)
+        if(player.state.isTheirTurn === false)
             return `Not player ${playerID}'s turn!`;
         if(grid[row][col] === undefined)
             return `Can't set cell out of 3x3 grid bounds`;
         else if(grid[row][col] !== null)
-            return `Can't set ${player.getState().mark} mark in cell(${row}, ${col}) as it is occupied!`; 
+            return `Can't set ${player.state.mark} mark in cell(${row}, ${col}) as it is occupied!`; 
         else {
-            grid[row][col] = player.getState().mark;
+            grid[row][col] = player.state.mark;
             moveHistory.push({
                 row: row,
                 col: col,
-                mark: player.getState().mark,
+                mark: player.state.mark,
             });
             moves++;
             
             // toggling player turns
-            players.A.setTurn(!players.A.getState().isTheirTurn);
-            players.B.setTurn(!players.B.getState().isTheirTurn);
+            players.A.isTheirTurn = !players.A.state.isTheirTurn;
+            players.B.isTheirTurn = !players.B.state.isTheirTurn;
 
             checkWin();
         }
@@ -174,10 +183,10 @@ let gameboard = (() => {
         // if three of the same mark are found in either rows, cols or diagonals, then return round winner
         if(threeOfSameMark){
             currentState = states.ROUND_END;
-            lastRoundWinner = (firstMark === players.A.getState().mark) ? players.A : players.B;
+            lastRoundWinner = (firstMark === players.A.state.mark) ? players.A : players.B;
             lastRoundWinner.incrementScore();
             if (CONSOLE_OUTPUT) {
-                console.log(`Round #${currentRound} won by ${lastRoundWinner.getState().name} (${lastRoundWinner.getState().mark})!`);
+                console.log(`Round #${currentRound} won by ${lastRoundWinner.state.name} (${lastRoundWinner.state.mark})!`);
                 console.log(getGameState().players);
             }
         } else if(moves === 9){
@@ -206,8 +215,8 @@ let gameboard = (() => {
         
         // reassigning O and X marks
         let firstMover = firstMoverCoinToss();
-        players.A.setTurn(firstMover === 'A');
-        players.B.setTurn(firstMover === 'B');
+        players.A.isTheirTurn = (firstMover === 'A');
+        players.B.isTheirTurn = (firstMover === 'B');
         if(firstMover === 'A'){
             players.A.setMarkToCross();
             players.B.setMarkToCircle();
@@ -221,12 +230,12 @@ let gameboard = (() => {
     let endMatch = () => {
         currentState = states.MATCH_END;
         
-        if (players.A.getState().score > players.B.getState().score){
+        if (players.A.state.score > players.B.state.score){
             matchWinner = players.A;
-            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.getState().name}!`);
-        } else if (players.A.getState().score < players.B.getState().score){
+            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.state.name}!`);
+        } else if (players.A.state.score < players.B.state.score){
             matchWinner = players.B;
-            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.getState().name}!`);
+            if (CONSOLE_OUTPUT) console.log(`The match has been won by ${matchWinner.state.name}!`);
         } else {
             matchWinner = null;
             if (CONSOLE_OUTPUT) console.log(`The match has been drawn!`);
@@ -241,8 +250,8 @@ let gameboard = (() => {
             state: currentState, 
             grid: getGrid(), 
             players: {
-                A: players.A.getState(), 
-                B: players.B.getState()
+                A: players.A.state, 
+                B: players.B.state
             },
             moves: moveHistory.slice(),
             round: currentRound,
@@ -253,10 +262,10 @@ let gameboard = (() => {
                 stateInfo.currentTurn = whoseTurn();
                 break;
             case states.ROUND_END:
-                stateInfo.roundWinner = (lastRoundWinner) ? lastRoundWinner.getState() : null;
+                stateInfo.roundWinner = (lastRoundWinner) ? lastRoundWinner.state : null;
                 break;
             case states.MATCH_END:
-                stateInfo.matchWinner = (matchWinner) ? matchWinner.getState() : null;
+                stateInfo.matchWinner = (matchWinner) ? matchWinner.state : null;
                 break;
             default:
                 console.log("Unknown state!");
